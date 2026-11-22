@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import Sidebar from "@/components/layout/Sidebar";
 import {
@@ -102,9 +103,28 @@ const atalhos = [
 
 export default function Home() {
   const [pesquisa, setPesquisa] = useState("");
+  const [nomeUsuario, setNomeUsuario] = useState("viajante");
   const [resultado, setResultado] = useState<ResultadoBusca | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
+
+  useEffect(() => {
+    async function buscarUsuario() {
+        const supabase = createClient();
+
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+            const nome = user.user_metadata?.nome_exibicao;
+
+            if (nome) {
+                setNomeUsuario(nome);
+            }
+        }
+    }
+
+    buscarUsuario();
+}, []);
 
   async function buscarDestino(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -158,21 +178,21 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F0F7FA]">
-      <Sidebar />
+    <div className="min-h-screen bg-[#F0F7FA]">
+    <Sidebar />
 
-      <main className="min-w-0 flex-1 px-4 py-6 md:px-8 md:py-9">
-        <div className="mx-auto max-w-[1500px]">
+      <main className="relative z-0 ml-0 min-h-screen min-w-0 p-4 pt-20 md:p-8 lg:ml-[264px] lg:pt-8">
+    <div className="mx-auto w-full max-w-[1500px]">
 
           {/* CABEÇALHO */}
-          <header className="mb-8 flex flex-wrap items-center justify-between gap-5">
+          <header className="mb-8 flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#167D8D]">
                 BEM-VINDO AO TRIPIA
               </p>
 
               <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#102A43] md:text-3xl">
-                Sua próxima aventura começa aqui.
+                Olá, {nomeUsuario}! Sua próxima aventura começa aqui.
               </h1>
 
               <p className="mt-2 text-sm text-slate-500">
@@ -182,7 +202,7 @@ export default function Home() {
 
             <Link
               href="/roteiros"
-              className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#102A43] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#102A43] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:w-auto"
             >
               <CalendarDays size={17} />
               Planejar viagem
@@ -190,7 +210,7 @@ export default function Home() {
           </header>
 
           {/* BUSCA DE DESTINOS */}
-          <section className="mb-8 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm md:p-6">
+          <section className="mb-8 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5 md:p-6">
             <div className="mb-4">
               <p className="text-xs font-bold uppercase tracking-widest text-[#167D8D]">
                 EXPLORE O MUNDO
@@ -220,7 +240,7 @@ export default function Home() {
                   value={pesquisa}
                   onChange={(event) => setPesquisa(event.target.value)}
                   placeholder="Ex.: Paris, Rio de Janeiro, Fortaleza..."
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-4 text-sm text-[#102A43] outline-none transition placeholder:text-slate-400 focus:border-[#38BFC1] focus:bg-white focus:ring-2 focus:ring-[#38BFC1]/20"
+                  className="w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm text-[#102A43] outline-none transition placeholder:text-slate-400 focus:border-[#38BFC1] focus:bg-white focus:ring-2 focus:ring-[#38BFC1]/20 sm:py-4"
                 />
               </div>
 
@@ -280,7 +300,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {resultado.atracoes.map((atracao) => {
                     const imagem =
                       atracao.imagemAlternativa?.url ||
@@ -295,7 +315,7 @@ export default function Home() {
                           <img
                             src={imagem}
                             alt={atracao.name}
-                            className="h-44 w-full object-cover"
+                            className="h-40 w-full object-cover sm:h-44"
                           />
                         ) : (
                           <div className="relative flex h-44 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-[#102A43] via-[#167D8D] to-[#38BFC1]">
@@ -360,13 +380,13 @@ export default function Home() {
 
             <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#102A43]/95 via-[#102A43]/75 to-[#102A43]/20" />
 
-            <div className="relative flex min-h-[360px] flex-col justify-center px-7 py-10 md:min-h-[410px] md:px-12">
+            <div className="relative flex min-h-[340px] flex-col justify-center px-5 py-8 sm:min-h-[360px] sm:px-7 sm:py-10 md:min-h-[410px] md:px-12">
               <div className="mb-6 inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md">
                 <Sparkles size={15} className="text-[#65E0D9]" />
                 SUA VIAGEM, COM INTELIGÊNCIA ARTIFICIAL
               </div>
 
-              <h2 className="max-w-2xl text-3xl font-extrabold leading-tight tracking-tight text-white md:text-5xl">
+              <h2 className="max-w-2xl text-2xl font-extrabold leading-tight tracking-tight text-white sm:text-3xl md:text-5xl">
                 O mundo é grande.
                 <br />
                 <span className="text-[#65E0D9]">
@@ -379,7 +399,7 @@ export default function Home() {
                 personalizados com a inteligência artificial do TripIA.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href="/roteiros"
                   className="flex items-center gap-3 rounded-xl bg-[#38BFC1] px-6 py-4 text-sm font-bold text-[#102A43] shadow-lg transition hover:-translate-y-1 hover:bg-[#65E0D9]"
@@ -411,7 +431,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
               {atalhos.map((atalho) => {
                 const Icon = atalho.icon;
 
@@ -419,7 +439,7 @@ export default function Home() {
                   <Link
                     key={atalho.titulo}
                     href={atalho.href}
-                    className="group flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#BCE8E7] hover:shadow-lg"
+                    className="group flex min-w-0 items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-[#BCE8E7] hover:shadow-lg sm:gap-4 sm:p-5"
                   >
                     <div
                       className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ${atalho.cor}`}
@@ -485,7 +505,7 @@ export default function Home() {
         aria-label={`Explorar ${destino.nome}`}
         className="group overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
       >
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative h-52 overflow-hidden sm:h-64">
           <div
             className="absolute inset-0 bg-cover bg-center transition duration-700 group-hover:scale-110"
             style={{
@@ -509,7 +529,7 @@ export default function Home() {
               {destino.pais}
             </div>
 
-            <h3 className="text-2xl font-extrabold tracking-tight">
+            <h3 className="text-xl font-extrabold tracking-tight sm:text-2xl">
               {destino.nome}
             </h3>
           </div>
@@ -545,7 +565,7 @@ export default function Home() {
   <div className="absolute -right-10 -top-14 h-52 w-52 rounded-full border border-white/10" />
   <div className="absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-[#167D8D]/20 blur-3xl" />
 
-  <div className="relative flex flex-col justify-between gap-8 p-7 md:flex-row md:items-center md:p-10">
+  <div className="relative flex flex-col justify-between gap-6 p-5 sm:gap-8 sm:p-7 md:flex-row md:items-center md:p-10">
 
     <div className="max-w-2xl">
 
@@ -556,7 +576,7 @@ export default function Home() {
         </span>
       </div>
 
-      <h2 className="text-2xl font-extrabold leading-tight tracking-tight text-white md:text-3xl">
+      <h2 className="text-xl font-extrabold leading-tight tracking-tight text-white sm:text-2xl md:text-3xl">
         Sua próxima viagem merece um planejamento extraordinário.
       </h2>
 
@@ -589,7 +609,7 @@ export default function Home() {
 
       <Link
         href="/roteiros"
-        className="group flex items-center justify-center gap-3 rounded-xl bg-[#38BFC1] px-6 py-4 text-sm font-extrabold text-[#102A43] shadow-lg transition hover:-translate-y-1 hover:bg-[#65E0D9]"
+        className="group flex w-full items-center justify-center gap-3 rounded-xl bg-[#38BFC1] px-5 py-4 text-sm font-extrabold text-[#102A43] shadow-lg transition hover:-translate-y-1 hover:bg-[#65E0D9] sm:w-auto"
       >
         Criar meu roteiro com IA
         <ArrowRight
