@@ -2,6 +2,7 @@ import Groq from "groq-sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { criarLocalizacaoFinanceiraUniversal } from "@/services/financeiro/localizacao";
 import { criarDadosPrecosEstimados } from "@/services/financeiro/estimativas";
+import { buscarPrecoCombustivel } from "@/services/financeiro/combustivel";
 
 // ======================================================
 // CONFIGURAÇÕES
@@ -1464,6 +1465,11 @@ export async function POST(request: NextRequest) {
         const dadosPrecos = localizacaoFinanceira
             ? await criarDadosPrecosEstimados(localizacaoFinanceira)
             : null;
+
+        const dadosCombustivel = localizacaoFinanceira
+            ? await buscarPrecoCombustivel(localizacaoFinanceira.codigoPais)
+            : null;
+
         const mapaPontos = new Map<string, PontoInteressante>(
             pontos.map((p): [string, PontoInteressante] => [p.id, p])
         );
@@ -1818,6 +1824,7 @@ Responda SOMENTE com JSON válido neste formato:
             avisos,
             localizacaoFinanceira,
             dadosPrecos,
+            dadosCombustivel,
         });
     } catch (error) {
         console.error("Erro ao gerar roteiro:", error);

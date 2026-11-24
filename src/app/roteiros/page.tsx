@@ -256,6 +256,8 @@ export default function RoteirosPage() {
 
     const [dadosPrecos, setDadosPrecos] =
         useState<any>(null);
+    const [dadosCombustivel, setDadosCombustivel] =
+        useState<any>(null);
     const [diaSelecionado, setDiaSelecionado] = useState<number | "todos">("todos");
     const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
     const [salvando, setSalvando] = useState(false);
@@ -552,6 +554,8 @@ export default function RoteirosPage() {
             setLocais(dados.locais || []);
             setLocalizacaoFinanceira(dados.localizacaoFinanceira ?? null);
             setDadosPrecos(dados.dadosPrecos ?? null);
+            setDadosCombustivel(dados.dadosCombustivel ?? null);
+            console.log("DADOS DE COMBUSTÍVEL:", dados.dadosCombustivel);
         } catch (error) {
             console.error("Erro ao gerar roteiro:", error);
 
@@ -913,12 +917,90 @@ export default function RoteirosPage() {
     const precoAlmoco = precoDe(ITENS_PRECO.almoco);
     const precoJantar = precoDe(ITENS_PRECO.jantar);
 
-    const temPrecos = [precoUber, precoOnibus, precoCafe, precoAlmoco, precoJantar].every(
-        (v) => v !== null
-    );
+    const temPrecos = [
+        precoUber,
+        precoOnibus,
+        precoCafe,
+        precoAlmoco,
+        precoJantar,
+    ].every((v) => v !== null);
+
+    const temPrecosAlimentacao =
+        precoCafe !== null &&
+        precoAlmoco !== null &&
+        precoJantar !== null;
 
     const pessoasCustos = Math.max(1, Number(viajantes) || 1);
     const diasCustos = Math.max(1, duracaoViagem || dias.length || 1);
+
+    const distanciaTotalViagemKm = distanciasPorDia.reduce(
+        (total, item) => {
+            const distancia = Number(item.distanciaKm);
+
+            return total + (
+                Number.isFinite(distancia) && distancia > 0
+                    ? distancia
+                    : 0
+            );
+        },
+        0
+    );
+
+    const distanciaDiaSelecionadoKm =
+        diaSelecionado === "todos"
+            ? distanciaTotalViagemKm
+            : distanciasPorDia.find(
+                (item) => item.dia === Number(diaSelecionado)
+            )?.distanciaKm ?? 0;
+    // Consumo médio estimado por modalidade
+    const CONSUMO_MEDIO = {
+        Carro: 10,
+        Moto: 30,
+    };
+
+    // ------------------------------------------------------
+    // COMBUSTÍVEL — estimativa baseada nas rotas do mapa
+    // ------------------------------------------------------
+
+    const precoCombustivel =
+        dadosCombustivel?.disponivel === true &&
+            typeof dadosCombustivel.precoPorLitro === "number" &&
+            dadosCombustivel.precoPorLitro > 0
+            ? dadosCombustivel.precoPorLitro
+            : null;
+
+    const consumoMedioVeiculo =
+        transporte === "Carro"
+            ? CONSUMO_MEDIO.Carro
+            : transporte === "Moto"
+                ? CONSUMO_MEDIO.Moto
+                : null;
+
+    const usaCombustivel =
+        (transporte === "Carro" || transporte === "Moto") &&
+        precoCombustivel !== null &&
+        consumoMedioVeiculo !== null;
+
+    const custoCombustivelTotal =
+        usaCombustivel
+            ? (distanciaTotalViagemKm / consumoMedioVeiculo) *
+            precoCombustivel
+            : null;
+
+    const custoCombustivelDiaSelecionado =
+        usaCombustivel
+            ? (distanciaDiaSelecionadoKm / consumoMedioVeiculo!) *
+            precoCombustivel
+            : null;
+
+    const litrosCombustivelTotal =
+        usaCombustivel
+            ? distanciaTotalViagemKm / consumoMedioVeiculo!
+            : null;
+
+    console.log("DISTÂNCIAS DO ROTEIRO:", distanciasPorDia);
+    console.log("DISTÂNCIA TOTAL:", distanciaTotalViagemKm);
+    console.log("DISTÂNCIA SELECIONADA:", distanciaDiaSelecionadoKm);
 
     const custosDiarios = {
         uber: (precoUber ?? 0) * 2,
@@ -928,13 +1010,26 @@ export default function RoteirosPage() {
         jantar: (precoJantar ?? 0) * pessoasCustos,
     };
 
+    const transporteDiarioSelecionado =
+        transporte === "Carro" || transporte === "Moto"
+            ? custoCombustivelTotal !== null
+                ? custoCombustivelTotal / diasCustos
+                : null
+            : transporte === "Ônibus"
+                ? precoOnibus !== null
+                    ? custosDiarios.onibus
+                    : null
+                : null;
+
     const alimentacaoPorPessoaDia =
         (precoCafe ?? 0) + (precoAlmoco ?? 0) + (precoJantar ?? 0);
 
     const resumo =
-        temPrecos && moedaFinanceira
+        temPrecosAlimentacao &&
+            transporteDiarioSelecionado !== null &&
+            moedaFinanceira
             ? calcularResumoFinanceiro({
-                transporteDiario: custosDiarios.uber + custosDiarios.onibus,
+                transporteDiario: transporteDiarioSelecionado,
                 alimentacaoDiariaPorPessoa: alimentacaoPorPessoaDia,
                 quantidadeDias: diasCustos,
                 quantidadePessoas: pessoasCustos,
@@ -953,11 +1048,45 @@ export default function RoteirosPage() {
             : formatarMoeda(valor, moedaFinanceira, "pt-BR");
 
     const categoriasCustos = [
-        { nome: "Uber / Aplicativo", valor: custosDiarios.uber * diasCustos, cor: "#167D8D", detalhe: "2 corridas por dia para o grupo" },
-        { nome: "Ônibus urbano", valor: custosDiarios.onibus * diasCustos, cor: "#3B82F6", detalhe: "2 passagens por pessoa/dia" },
-        { nome: "Café da manhã", valor: custosDiarios.cafe * diasCustos, cor: "#F59E0B", detalhe: `Média de ${formatarDinheiro(precoCafe)} por pessoa` },
-        { nome: "Almoço", valor: custosDiarios.almoco * diasCustos, cor: "#F97316", detalhe: `Média de ${formatarDinheiro(precoAlmoco)} por pessoa` },
-        { nome: "Jantar", valor: custosDiarios.jantar * diasCustos, cor: "#8B5CF6", detalhe: `Média de ${formatarDinheiro(precoJantar)} por pessoa` },
+        // CARRO OU MOTO: combustível calculado pela distância do mapa
+        ...(usaCombustivel && custoCombustivelTotal !== null
+            ? [{
+                nome: `Combustível (${transporte})`,
+                valor: custoCombustivelTotal,
+                cor: "#167D8D",
+                detalhe: `${distanciaTotalViagemKm.toFixed(1)} km percorridos · ${litrosCombustivelTotal!.toFixed(2)} litros estimados`,
+            }]
+            : []),
+
+        // ÔNIBUS: passagens para todos os viajantes
+        ...(transporte === "Ônibus" && precoOnibus !== null
+            ? [{
+                nome: "Ônibus urbano",
+                valor: custosDiarios.onibus * diasCustos,
+                cor: "#3B82F6",
+                detalhe: "2 passagens por pessoa/dia",
+            }]
+            : []),
+
+        // ALIMENTAÇÃO
+        {
+            nome: "Café da manhã",
+            valor: custosDiarios.cafe * diasCustos,
+            cor: "#F59E0B",
+            detalhe: `Média de ${formatarDinheiro(precoCafe)} por pessoa`,
+        },
+        {
+            nome: "Almoço",
+            valor: custosDiarios.almoco * diasCustos,
+            cor: "#F97316",
+            detalhe: `Média de ${formatarDinheiro(precoAlmoco)} por pessoa`,
+        },
+        {
+            nome: "Jantar",
+            valor: custosDiarios.jantar * diasCustos,
+            cor: "#8B5CF6",
+            detalhe: `Média de ${formatarDinheiro(precoJantar)} por pessoa`,
+        },
     ];
 
     const diasCustosVisiveis = Array.from({ length: diasCustos }, (_, indice) => {
@@ -1548,20 +1677,6 @@ export default function RoteirosPage() {
                                     </div>
                                 )}
 
-                                {/* CARREGAMENTO */}
-                                {carregando && (
-                                    <div className="mt-4 flex flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
-                                        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#E6F7F7]">
-                                            <Sparkles size={30} className="animate-pulse text-[#167D8D]" />
-                                        </div>
-                                        <h2 className="text-xl font-bold text-[#102A43]">
-                                            A criar a sua próxima aventura
-                                        </h2>
-                                        <p className="mt-2 max-w-md text-sm leading-7 text-slate-500">
-                                            A nossa inteligência artificial está a organizar destinos, experiências e sugestões para a sua viagem.
-                                        </p>
-                                    </div>
-                                )}
 
                                 {/* SEPARADOR TEMPO */}
                                 {abaAtiva === "clima" && (
@@ -1936,37 +2051,133 @@ export default function RoteirosPage() {
                                         </section>
 
                                         <div className="grid gap-5 lg:grid-cols-2">
+
                                             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                                                 <div className="mb-4 flex items-center gap-3">
-                                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-700"><Car size={22} /></div>
+                                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-700">
+                                                        <Car size={22} />
+                                                    </div>
                                                     <div>
-                                                        <h3 className="font-bold text-[#102A43]">Transporte na cidade</h3>
-                                                        <p className="text-xs text-slate-500">Estimativas de deslocamento por dia</p>
+                                                        <h3 className="font-bold text-[#102A43]">
+                                                            Transporte na cidade
+                                                        </h3>
+                                                        <p className="text-xs text-slate-500">
+                                                            Estimativa conforme o transporte selecionado
+                                                        </p>
                                                     </div>
                                                 </div>
+
+
                                                 <div className="divide-y divide-slate-100">
+
+                                                    {/* UBER — FIXO */}
                                                     <div className="flex items-center justify-between gap-3 py-4">
                                                         <div>
-                                                            <p className="font-semibold text-[#102A43]">Uber / Aplicativo</p>
-                                                            <p className="text-xs text-slate-500">{`${formatarDinheiro(precoUber)} por corrida · 2 por dia`}</p>
+                                                            <p className="font-semibold text-[#102A43]">
+                                                                Uber / Aplicativo
+                                                            </p>
+                                                            <p className="text-xs text-slate-500">
+                                                                {formatarDinheiro(precoUber)} por corrida · 2 por dia
+                                                            </p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="font-bold text-[#167D8D]">{formatarDinheiro(custosDiarios.uber)}</p>
+                                                            <p className="font-bold text-[#167D8D]">
+                                                                {formatarDinheiro(custosDiarios.uber)}
+                                                            </p>
                                                             <p className="text-xs text-slate-400">Por dia, grupo</p>
+                                                            <p className="text-xs text-slate-500">
+                                                                Total: {formatarDinheiro(custosDiarios.uber * diasCustos)}
+                                                            </p>
                                                         </div>
                                                     </div>
+
+                                                    {/* ÔNIBUS — FIXO */}
                                                     <div className="flex items-center justify-between gap-3 py-4">
                                                         <div>
-                                                            <p className="font-semibold text-[#102A43]">Ônibus urbano</p>
-                                                            <p className="text-xs text-slate-500">{`${formatarDinheiro(precoOnibus)} por bilhete · 2 por pessoa/dia`}</p>
+                                                            <p className="font-semibold text-[#102A43]">
+                                                                Ônibus urbano
+                                                            </p>
+                                                            <p className="text-xs text-slate-500">
+                                                                {formatarDinheiro(precoOnibus)} por bilhete · 2 por pessoa/dia
+                                                            </p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="font-bold text-[#167D8D]">{formatarDinheiro(custosDiarios.onibus)}</p>
+                                                            <p className="font-bold text-[#167D8D]">
+                                                                {formatarDinheiro(custosDiarios.onibus)}
+                                                            </p>
                                                             <p className="text-xs text-slate-400">Por dia, grupo</p>
+                                                            <p className="text-xs text-slate-500">
+                                                                Total: {formatarDinheiro(custosDiarios.onibus * diasCustos)}
+                                                            </p>
                                                         </div>
                                                     </div>
+
+                                                    {/* TRANSPORTE SELECIONADO — DINÂMICO */}
+                                                    {(transporte === "Carro" || transporte === "Moto") && (
+                                                        <div className="py-4">
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <div>
+                                                                    <p className="font-semibold text-[#102A43]">
+                                                                        Combustível ({transporte})
+                                                                    </p>
+                                                                    <p className="text-xs text-slate-500">
+                                                                        {distanciaTotalViagemKm.toFixed(1).replace(".", ",")} km no roteiro · {consumoMedioVeiculo} km/L
+                                                                    </p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="font-bold text-[#167D8D]">
+                                                                        {formatarDinheiro(custoCombustivelTotal)}
+                                                                    </p>
+                                                                    <p className="text-xs text-slate-400">
+                                                                        Total da viagem
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="mt-3 rounded-xl bg-[#F0F7FA] p-3 text-xs text-slate-600">
+                                                                {precoCombustivel !== null ? (
+                                                                    <>
+                                                                        Preço estimado por litro:{" "}
+                                                                        <strong className="text-[#102A43]">
+                                                                            {formatarDinheiro(precoCombustivel)}
+                                                                        </strong>
+                                                                        <br />
+                                                                        Consumo previsto:{" "}
+                                                                        <strong className="text-[#102A43]">
+                                                                            {litrosCombustivelTotal?.toFixed(2).replace(".", ",")} litros
+                                                                        </strong>
+                                                                        <br />
+                                                                        Custo médio diário:{" "}
+                                                                        <strong className="text-[#102A43]">
+                                                                            {formatarDinheiro(
+                                                                                diasCustos > 0 && custoCombustivelTotal !== null
+                                                                                    ? custoCombustivelTotal / diasCustos
+                                                                                    : null
+                                                                            )}
+                                                                        </strong>
+                                                                    </>
+                                                                ) : (
+                                                                    "Preço do combustível indisponível para este destino."
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {transporte === "Avião" && (
+                                                        <div className="py-4">
+                                                            <p className="font-semibold text-[#102A43]">
+                                                                Transporte aéreo
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-slate-500">
+                                                                Passagens aéreas não estão incluídas nesta estimativa.
+                                                            </p>
+                                                        </div>
+                                                    )}
+
                                                 </div>
+
                                             </section>
+
 
                                             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                                                 <div className="mb-4 flex items-center gap-3">

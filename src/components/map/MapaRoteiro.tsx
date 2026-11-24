@@ -397,6 +397,7 @@ export default function MapaRoteiro({
 
     useEffect(() => {
         let ativo = true;
+        onDistanciasPorDiaCalculadas?.([]);
 
         async function calcularDistanciasDiarias() {
             if (!locaisPorDia || locaisPorDia.length === 0) {
