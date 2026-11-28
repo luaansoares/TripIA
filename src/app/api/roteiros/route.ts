@@ -1519,7 +1519,12 @@ Observações: ${observacoes || "Nenhuma"}
 ${blocoLista}
 REGRAS:
 - Gere exatamente ${datas.length} dias, usando as datas informadas acima.
-- Por dia: 2 a 4 atividades (períodos: manhã, tarde, noite) e no máximo 1 almoço e 1 jantar em "gastronomia". Use as atrações e estabelecimentos reais fornecidos pela API sempre que houver opções adequadas.
+- Por dia, procure selecionar de 3 a 5 atrações turísticas reais da lista da API, quando houver opções adequadas. As atividades devem ser distribuídas entre manhã, tarde e noite, sem obrigar três períodos se não fizer sentido.
+- Aproveite as atrações relevantes disponíveis na lista da API ao longo de todos os dias, evitando deixar opções adequadas de fora sem motivo.
+- Não concentre todas as atrações em um único dia. Distribua os locais considerando proximidade geográfica, tempo de visita e deslocamento.
+- Não repita atrações em dias diferentes, salvo quando houver justificativa.
+- Mantenha no máximo 1 sugestão gastronômica para almoço e 1 para jantar por dia.
+- Não adicione atividades apenas para atingir uma quantidade. Priorize qualidade, viabilidade e coerência do roteiro.
 - Agrupe locais próximos. Use os lugares reais da lista da API. Não invente estabelecimentos, endereços, horários, avaliações, preços ou coordenadas.
 - Respeite todos os locais pedidos nas observações, reconhecendo apelidos e variações de escrita.
 - GASTRONOMIA REGIONAL: priorize pratos, comidas, ingredientes e preparos tradicionalmente associados ao destino ou à região. Evite sugestões genéricas que poderiam existir em qualquer cidade.
@@ -1597,7 +1602,9 @@ Responda SOMENTE com JSON válido neste formato:
             // caso contrário consomem o max_completion_tokens e o JSON não termina.
             reasoning_effort: "low",
             max_completion_tokens: MAX_TOKENS_SAIDA,
-        } as any);
+        } as any, {
+            signal: request.signal,
+        });
 
         console.log("Resposta recebida do Groq.");
 

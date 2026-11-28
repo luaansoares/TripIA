@@ -1,21 +1,35 @@
-
 @import "tailwindcss";
 
 :root {
-  /* Identidade visual TripIA */
   --primary: #102A43;
   --primary-light: #1D4263;
   --accent: #2563EB;
 
-  /* Cores de interface */
-  --background: #F5F7FA;
+  --background: #F0F7FA;
   --foreground: #172B4D;
   --surface: #FFFFFF;
+  --surface-alt: #F8FAFC;
+  --titulo: #102A43;
   --muted: #64748B;
   --border: #E2E8F0;
+  --destaque: #167D8D;
+  --destaque-suave: #E6F7F7;
+}
 
-  /* Tipografia */
-  --font-main: Arial, Helvetica, sans-serif;
+[data-theme="escuro"] {
+  --primary: #DCEAF5;
+  --primary-light: #B8D1E5;
+  --accent: #60A5FA;
+
+  --background: #0B1724;
+  --foreground: #E5EDF5;
+  --surface: #142536;
+  --surface-alt: #0F1E2D;
+  --titulo: #E5EDF5;
+  --muted: #9AABBC;
+  --border: #2B4053;
+  --destaque: #38BFC1;
+  --destaque-suave: #17404A;
 }
 
 @theme inline {
@@ -23,17 +37,19 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-accent: var(--accent);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-titulo: var(--titulo);
+  --color-muted: var(--muted);
+  --color-line: var(--border);
+  --color-destaque: var(--destaque);
+  --color-destaque-suave: var(--destaque-suave);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html {
-  min-height: 100%;
-}
+* { box-sizing: border-box; }
+html { min-height: 100%; }
 
 body {
   min-height: 100vh;
@@ -42,11 +58,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
+button, input, textarea, select { font: inherit; }
